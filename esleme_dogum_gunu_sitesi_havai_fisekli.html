@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Esleme Doğum Günün Kutlu Olsun 🎉</title>
+  <style>
+    :root{
+      --bg: #0b0f17;
+      --fg: #f5f7fb;
+      --accent: #ff75a0;
+      --muted: #9aa4b2;
+      --glass: rgba(255,255,255,0.08);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;}
+    body{
+      margin:0; background: radial-gradient(1200px 800px at 70% 20%, #10182a 0%, #0b0f17 40%, #06080e 100%);
+      color:var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      overflow:hidden;
+    }
+    /* Canvas full screen for fireworks */
+    #sky{position:fixed; inset:0; width:100vw; height:100vh; display:block;}
+
+    /* Center message card */
+    .center{
+      position:fixed; inset:0; display:grid; place-items:center; pointer-events:none;
+    }
+    .card{
+      pointer-events:auto;
+      max-width:min(90vw, 900px);
+      text-align:center;
+      padding:clamp(18px, 2.5vw, 36px);
+      border-radius:24px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      backdrop-filter: blur(8px);
+      border:1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      transform: translateY(6px);
+      opacity:0;
+      transition: opacity .8s ease, transform .8s ease;
+    }
+    .card.show{ opacity:1; transform: translateY(0); }
+
+    h1{
+      margin:0 0 .3em; line-height:1.1; font-size:clamp(28px, 5vw, 56px); font-weight:800;
+      letter-spacing:.5px;
+      text-shadow: 0 2px 10px rgba(255, 118, 166, .2);
+    }
+    .highlight{ color:var(--accent); }
+
+    p{
+      margin:.3em 0 0; font-size:clamp(16px, 2.2vw, 22px); color:var(--muted);
+    }
+
+    .controls{
+      margin-top:18px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;
+    }
+    button{
+      pointer-events:auto; cursor:pointer; border:none; outline:none;
+      padding:12px 18px; border-radius:14px; font-weight:700; letter-spacing:.3px;
+      background: var(--glass); color: var(--fg);
+      border:1px solid rgba(255,255,255,0.15);
+      transition: transform .1s ease, background .2s ease, box-shadow .2s ease;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    }
+    button:hover{ transform: translateY(-1px); background: rgba(255,255,255,0.12); }
+    button:active{ transform: translateY(1px); }
+
+    .footer{
+      position:fixed; left:0; right:0; bottom:10px; text-align:center; font-size:12px; color:#7e8896;
+      opacity:.8;
+    }
+
+    /* Subtle twinkling stars */
+    .stars{ position: fixed; inset:0; pointer-events:none; }
+    .star{ position:absolute; width:2px; height:2px; background:#fff; opacity:.25; border-radius:50%; animation: twinkle 4s infinite ease-in-out; }
+    @keyframes twinkle{ 0%,100%{ opacity:.1 } 50%{ opacity:.6 } }
+  </style>
+</head>
+<body>
+  <canvas id="sky"></canvas>
+  <div class="stars" id="stars"></div>
+  <div class="center">
+    <div class="card" id="message">
+      <h1>Doğum günün kutlu olsun <span class="highlight">Eslem</span>! 🎂</h1>
+      <p>Nicee senelere, sağlıkla ve mutlulukla ✨</p>
+      <div class="controls">
+        <button id="replay">Havai fişekleri tekrar başlat</button>
+        <button id="screenshot">Anı yakala (PNG)</button>
+      </div>
+    </div>
+  </div>
+  <div class="footer">Havai fişekler otomatik başlar • Mobil ve masaüstü uyumlu</div>
+
+  <script>
+  // ==== UTILITIES ====
+  const rand = (min, max) => Math.random() * (max - min) + min;
+  const clamp = (n, a, b) => Math.max(a, Math.min(n, b));
+  const TAU = Math.PI * 2;
+
+  // ==== CANVAS SETUP ====
+  const canvas = document.getElementById('sky');
+  const ctx = canvas.getContext('2d');
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  function resize(){
+    canvas.width = Math.floor(innerWidth * DPR);
+    canvas.height = Math.floor(innerHeight * DPR);
+    canvas.style.width = '100vw';
+    canvas.style.height = '100vh';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  // ==== STARS BACKDROP ====
+  const starsEl = document.getElementById('stars');
+  function seedStars(){
+    starsEl.innerHTML = '';
+    const count = Math.min(120, Math.round(innerWidth * innerHeight / 12000));
+    for(let i=0;i<count;i++){
+      const s = document.createElement('div');
+      s.className = 'star';
+      const x = Math.random() * 100; const y = Math.random() * 100;
+      s.style.left = x + 'vw'; s.style.top = y + 'vh';
+      s.style.animationDelay = (Math.random()*4).toFixed(2)+'s';
+      s.style.opacity = (Math.random()*0.6+0.1).toFixed(2);
+      s.style.transform = `scale(${Math.random()*1.2+0.6})`;
+      starsEl.appendChild(s);
+    }
+  }
+  seedStars();
+  addEventListener('resize', seedStars);
+
+  // ==== FIREWORKS ENGINE ====
+  const gravity = 0.12;
+  const air = 0.995;
+  const rockets = [];
+  const particles = [];
+  let running = false;
+
+  class Rocket{
+    constructor(x, y, targetX, targetY, hue){
+      this.x = x; this.y = y; this.tx = targetX; this.ty = targetY;
+      this.hue = hue;
+      const angle = Math.atan2(this.ty - y, this.tx - x);
+      const speed = rand(6.5, 8.8);
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed;
+      this.life = rand(45, 60);
+      this.done = false;
+    }
+    update(){
+      this.x += this.vx;
+      this.y += this.vy;
+      this.vy += gravity * -0.15; // light buoyancy while rising
+      this.life--;
+      // trail
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = `hsl(${this.hue},100%,70%)`;
+      ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, TAU); ctx.fill();
+      ctx.restore();
+      if(this.life <= 0 || Math.hypot(this.tx-this.x, this.ty-this.y) < 12){
+        this.explode(); this.done = true;
+      }
+    }
+    explode(){
+      const count = Math.round(rand(60, 100));
+      const base = rand(0, TAU);
+      for(let i=0;i<count;i++){
+        const angle = base + (i/count) * TAU + rand(-0.02, 0.02);
+        const speed = rand(2.5, 6.5) * (Math.random() < 0.1 ? 1.8 : 1);
+        particles.push(new Particle(this.x, this.y, Math.cos(angle)*speed, Math.sin(angle)*speed, this.hue));
+      }
+      // flash
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.beginPath(); ctx.arc(this.x, this.y, 60, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  class Particle{
+    constructor(x,y,vx,vy,hue){
+      this.x=x; this.y=y; this.vx=vx; this.vy=vy; this.hue=hue;
+      this.life = rand(50, 90);
+      this.size = rand(1.2, 2.2);
+      this.alpha = 1;
+      this.spark = Math.random() < 0.25;
+    }
+    update(){
+      this.vx *= air; this.vy *= air; this.vy += gravity*0.15;
+      this.x += this.vx; this.y += this.vy;
+      this.life -= 1; this.alpha = clamp(this.life/90, 0, 1);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const sat = 100, light = 60 + Math.sin((1-this.alpha)*6)*8;
+      ctx.fillStyle = `hsla(${this.hue},${sat}%,${light}%,${this.alpha})`;
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, TAU); ctx.fill();
+      // sparkles
+      if(this.spark && Math.random()<0.4){
+        ctx.fillStyle = `hsla(${this.hue},100%,85%,${this.alpha})`;
+        ctx.beginPath(); ctx.arc(this.x+rand(-2,2), this.y+rand(-2,2), this.size*0.6, 0, TAU); ctx.fill();
+      }
+      ctx.restore();
+      return this.life > 0 && this.y < innerHeight + 40; // cull when off-screen
+    }
+  }
+
+  function launchBurst(cx = innerWidth/2){
+    const volleys = Math.round(rand(2, 4));
+    for(let v=0; v<volleys; v++){
+      const targetY = rand(innerHeight*0.18, innerHeight*0.45);
+      const spread = rand(120, 260);
+      const n = Math.round(rand(2, 4));
+      for(let i=0;i<n;i++){
+        const tx = cx + (i - (n-1)/2) * spread;
+        const hue = rand(0,360);
+        rockets.push(new Rocket(rand(innerWidth*0.2, innerWidth*0.8), innerHeight+10, tx, targetY, hue));
+      }
+    }
+  }
+
+  // sequence controller
+  const message = document.getElementById('message');
+  const replayBtn = document.getElementById('replay');
+  const screenshotBtn = document.getElementById('screenshot');
+
+  function startShow(){
+    running = true; particles.length = 0; rockets.length = 0;
+    message.classList.remove('show');
+    let t = 0;
+    const seq = setInterval(()=>{
+      if(!running){ clearInterval(seq); return; }
+      launchBurst(rand(innerWidth*0.25, innerWidth*0.75));
+      t++;
+      if(t>5){ clearInterval(seq); setTimeout(()=> message.classList.add('show'), 1200); }
+    }, 950);
+  }
+
+  replayBtn.addEventListener('click', startShow);
+  screenshotBtn.addEventListener('click', ()=>{
+    // temporarily composite message and canvas for a keepsake
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = innerWidth * DPR; tempCanvas.height = innerHeight * DPR;
+    const tctx = tempCanvas.getContext('2d'); tctx.setTransform(DPR,0,0,DPR,0,0);
+    tctx.drawImage(canvas,0,0);
+    // draw message text
+    tctx.font = '700 44px ui-sans-serif, system-ui, -apple-system, Segoe UI';
+    tctx.fillStyle = '#ffffff';
+    tctx.textAlign = 'center';
+    tctx.fillText('Doğum günün kutlu olsun Eslem! 🎂', innerWidth/2, innerHeight/2 - 12);
+    tctx.font = '400 24px ui-sans-serif, system-ui';
+    tctx.fillStyle = 'rgba(255,255,255,.85)';
+    tctx.fillText('Nicee senelere, sağlıkla ve mutlulukla ✨', innerWidth/2, innerHeight/2 + 24);
+
+    const link = document.createElement('a');
+    link.download = 'eslem-dogumgunu.png';
+    link.href = tempCanvas.toDataURL('image/png');
+    link.click();
+  });
+
+  // ==== RENDER LOOP ====
+  function loop(){
+    requestAnimationFrame(loop);
+    // cinematic fade
+    ctx.fillStyle = 'rgba(11,15,23,0.35)';
+    ctx.fillRect(0,0,innerWidth,innerHeight);
+
+    // update rockets
+    for(let i=rockets.length-1;i>=0;i--){
+      rockets[i].update();
+      if(rockets[i].done) rockets.splice(i,1);
+    }
+    // update particles
+    for(let i=particles.length-1;i>=0;i--){
+      if(!particles[i].update()) particles.splice(i,1);
+    }
+
+    // fall back auto-launch when few particles
+    if(running && rockets.length===0 && particles.length < 60){
+      if(Math.random() < 0.02) launchBurst(rand(innerWidth*0.2, innerWidth*0.8));
+    }
+  }
+  loop();
+
+  // Start automatically, reveal text afterwards
+  startShow();
+  </script>
+</body>
+</html>
