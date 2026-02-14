@@ -1,368 +1,113 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Esleme Doğum Günün Kutlu Olsun 🎉</title>
-  <style>
-    :root{
-      --bg: #0b0f17;
-      --fg: #f5f7fb;
-      --accent: #ff75a0;
-      --muted: #9aa4b2;
-      --glass: rgba(255,255,255,0.08);
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%;}
-    body{
-      margin:0; background: radial-gradient(1200px 800px at 70% 20%, #10182a 0%, #0b0f17 40%, #06080e 100%);
-      color:var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      overflow:hidden;
-    }
-    /* Canvas full screen for fireworks */
-    #sky{position:fixed; inset:0; width:100vw; height:100vh; display:block;}
-
-    /* Center message card */
-    .center{
-      position:fixed; inset:0; display:grid; place-items:center; pointer-events:none;
-    }
-    .card{
-      pointer-events:auto;
-      max-width:min(90vw, 900px);
-      text-align:center;
-      padding:clamp(18px, 2.5vw, 36px);
-      border-radius:24px;
-      background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-      backdrop-filter: blur(8px);
-      border:1px solid rgba(255,255,255,0.12);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-      transform: translateY(6px);
-      opacity:0;
-      transition: opacity .8s ease, transform .8s ease;
-    }
-    .card.show{ opacity:1; transform: translateY(0); }
-
-    h1{
-      margin:0 0 .3em; line-height:1.1; font-size:clamp(28px, 5vw, 56px); font-weight:800;
-      letter-spacing:.5px;
-      text-shadow: 0 2px 10px rgba(255, 118, 166, .2);
-    }
-    .highlight{ color:var(--accent); }
-
-    p{
-      margin:.3em 0 0; font-size:clamp(16px, 2.2vw, 22px); color:var(--muted);
-    }
-
-    .controls{
-      margin-top:18px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;
-    }
-    button{
-      pointer-events:auto; cursor:pointer; border:none; outline:none;
-      padding:12px 18px; border-radius:14px; font-weight:700; letter-spacing:.3px;
-      background: var(--glass); color: var(--fg);
-      border:1px solid rgba(255,255,255,0.15);
-      transition: transform .1s ease, background .2s ease, box-shadow .2s ease;
-      box-shadow: 0 8px 24px rgba(0,0,0,.25);
-    }
-    button:hover{ transform: translateY(-1px); background: rgba(255,255,255,0.12); }
-    button:active{ transform: translateY(1px); }
-
-    .footer{
-      position:fixed; left:0; right:0; bottom:10px; text-align:center; font-size:12px; color:#7e8896;
-      opacity:.8;
-    }
-
-    /* Subtle twinkling stars */
-    .stars{ position: fixed; inset:0; pointer-events:none; }
-    .star{ position:absolute; width:2px; height:2px; background:#fff; opacity:.25; border-radius:50%; animation: twinkle 4s infinite ease-in-out; }
-    @keyframes twinkle{ 0%,100%{ opacity:.1 } 50%{ opacity:.6 } }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sana Olan Aşkım</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibesi&family=Lato:wght@300;400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
+
 <body>
-  <canvas id="sky"></canvas>
-  <div class="stars" id="stars"></div>
-  <div class="center">
-    <div class="card" id="message">
-      <h1>Doğum günün kutlu olsun <span class="highlight">Eslem</span>! 🎂</h1>
-      <p>Nicee senelere, sağlıkla ve mutlulukla ✨</p>
-      <div class="controls">
-        <button id="replay">Havai fişekleri tekrar başlat</button>
-        <button id="screenshot">SS Al</button>
-      </div>
+
+    <audio id="bg-music" loop>
+        <!-- Şarkıyı indirdikten sonra adını 'dans-et.mp3' yapıp bu klasöre atman yeterli -->
+        <source src="dans-et.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Click to Start Overlay -->
+    <div id="start-overlay">
+        <div class="envelope">
+            <i class="fas fa-envelope-open-text"></i>
+            <p>Sana Özel Bir Mektubum Var...</p>
+            <button id="start-btn">Mektubu Aç ❤️</button>
+        </div>
     </div>
-  </div>
-  <div class="footer">Yanında olup kutlayamadığım için özür dilerim :(</div>
 
-  <script>
-// ===== REALISTIC FIREWORKS v2 =====
-// Daha gerçekçi fizik: rüzgâr, sürtünme, iz (trail), duman, farklı havai fişek tipleri
+    <div class="music-control">
+        <div class="volume-container">
+            <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5">
+        </div>
+        <button id="music-btn"><i class="fas fa-music"></i></button>
+    </div>
 
-const rand = (a,b)=>Math.random()*(b-a)+a;
-const TAU = Math.PI*2;
-const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+    <div class="slider-container">
 
-// Canvas
-const canvas = document.getElementById('sky');
-const ctx = canvas.getContext('2d');
-const DPR = Math.min(devicePixelRatio||1, 2);
-function resize(){
-  canvas.width = innerWidth*DPR; canvas.height = innerHeight*DPR;
-  canvas.style.width='100vw'; canvas.style.height='100vh';
-  ctx.setTransform(DPR,0,0,DPR,0,0);
-}
-addEventListener('resize', resize); resize();
+        <!-- Slide 1: Welcome / Why I Love You -->
+        <div class="slide active" id="slide-1">
+            <div class="content">
+                <h1>Eslemim</h1>
+                <p>Seni niye bu kadar seviyorum biliyo musun</p>
+                <div class="reasons">
+                    <span>Bakışınla beni büyüleyişini</span>
+                    <span>Tek kelimenle dünyamı güzelleştirmeni</span>
+                    <span>Büyücü olduğunu saklayıp gercek oldugunu söylemeni :D</span>
+                </div>
+            </div>
+        </div>
 
-// Backdrop fade for persistence glow
-let backAlpha = 0.18; // izlerin sahnede kalma miktarı
+        <!-- Slide 2: Memories -->
+        <div class="slide" id="slide-2">
+            <div class="content">
+                <h1>Küçük Anımız</h1>
+                <div class="memory-grid">
+                    <div class="memory-card">
+                        <!-- Fotoğrafını buraya ekle (örnek: ani.jpg) -->
+                        <img src="ani.jpg" alt="Anımız">
+                        <!-- <i class="fas fa-camera-retro"></i> -->
+                        <p>İlk buluşmamızdaki o utangaçlıkla çektiğimiz fotoğraf</p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-// Dünya parametreleri
-let gravity = 0.25;        // aşağı ivme
-let airDrag = 0.992;       // hava sürtünmesi
-let wind = 0;              // anlık rüzgar
-let windTarget = 0;
-let windTimer = 0;
+        <!-- Slide 3: Future Plans -->
+        <div class="slide" id="slide-3">
+            <div class="content">
+                <h1>Geleceğim seninle olsun</h1>
+                <ul class="future-plans">
+                    <li> Seni cok seviyorum</li>
+                    <li> Seninle yaşlanmak istiyorum</li>
+                    <li> Her sabah yanında uyanıp saçını sevmek istiyorum</li>
+                </ul>
+            </div>
+        </div>
 
-// Koleksiyonlar
-const rockets = [];
-const particles = [];
-const smokes = [];
-let running = false;
+        <!-- Slide 4: Animated Note -->
+        <div class="slide" id="slide-4">
+            <div class="content">
+                <h1>Sana Notum</h1>
+                <div class="typewriter">
+                    <p id="typewriter-text"></p>
+                </div>
+                <div class="heart-container" id="heart-container"></div>
+                <button class="restart-btn" onclick="location.href='timeline.html'">Zaman Tüneline Git ⏳</button>
+            </div>
+        </div>
 
-// Yardımcılar
-function hsla(h,s,l,a){return `hsla(${h},${s}%,${l}%,${a})`;}
-function approach(current, target, step){
-  if(current<target) return Math.min(current+step, target);
-  if(current>target) return Math.max(current-step, target);
-  return current;
-}
+        <!-- Navigation -->
+        <div class="navigation">
+            <button class="nav-btn prev-btn"><i class="fas fa-chevron-left"></i></button>
+            <button class="nav-btn next-btn"><i class="fas fa-chevron-right"></i></button>
+        </div>
 
-// Duman parçacığı (hafifçe yukarı sürüklenir ve yayılır)
-class Smoke{
-  constructor(x,y){
-    this.x=x; this.y=y; this.vx=rand(-0.2,0.2)+wind*0.2; this.vy=rand(-0.1, -0.02);
-    this.life=rand(60,140); this.r=rand(6,14); this.a=0.6;
-  }
-  update(){
-    this.x+=this.vx; this.y+=this.vy; this.vx*=0.98; this.vy*=0.98;
-    this.a = this.life/140*0.35; this.r*=1.004; this.life--; 
-    ctx.fillStyle = `rgba(180,190,210,${this.a})`;
-    ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, TAU); ctx.fill();
-    return this.life>0 && this.y>-40;
-  }
-}
+        <!-- Pagination Dots -->
+        <div class="dots">
+            <span class="dot active" data-slide="0"></span>
+            <span class="dot" data-slide="1"></span>
+            <span class="dot" data-slide="2"></span>
+            <span class="dot" data-slide="3"></span>
+        </div>
 
-// Roket (yükselirken kıvılcım ve duman bırakır)
-class Rocket{
-  constructor(x, targetX, targetY, hue){
-    this.x=x; this.y=innerHeight+8; this.tx=targetX; this.ty=targetY; this.hue=hue;
-    const ang=Math.atan2(this.ty-this.y, this.tx-this.x);
-    const speed=rand(8.5,10.5);
-    this.vx=Math.cos(ang)*speed; this.vy=Math.sin(ang)*speed;
-    this.trail=[]; this.alive=true; this.sparkTimer=0;
-  }
-  update(){
-    // iz
-    this.trail.unshift({x:this.x,y:this.y}); if(this.trail.length>12) this.trail.pop();
+    </div>
 
-    // hareket
-    this.x+=this.vx; this.y+=this.vy; this.vx*=0.997; this.vy*=0.997; this.vy+=gravity*-0.12; // hafif kaldırma
-    this.vx+=wind*0.02; // rüzgar etkisi
+    <!-- Floating Hearts Background -->
+    <div class="background-hearts"></div>
 
-    // çiz (parlak çekirdek ve iz çizgisi)
-    ctx.save(); ctx.globalCompositeOperation='lighter';
-    for(let i=0;i<this.trail.length-1;i++){
-      const p=this.trail[i], n=this.trail[i+1];
-      ctx.strokeStyle = hsla(this.hue,100,70,(1-i/12)*0.5);
-      ctx.lineWidth = 2 - i*0.12; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(n.x,n.y); ctx.stroke();
-    }
-    ctx.fillStyle = hsla(this.hue,100,75,1);
-    ctx.beginPath(); ctx.arc(this.x,this.y,2.2,0,TAU); ctx.fill();
-    ctx.restore();
-
-    // kıvılcım + duman
-    if(this.sparkTimer--<=0){
-      this.sparkTimer = rand(1,3);
-      particles.push(new Spark(this.x, this.y, rand(-0.8,0.8), rand(0.6,1.2)*-1.2, this.hue, 18, true));
-      if(Math.random()<0.6) smokes.push(new Smoke(this.x, this.y));
-    }
-
-    const nearTarget = Math.hypot(this.tx-this.x, this.ty-this.y) < 12;
-    const goingUpSlow = this.vy>-0.2;
-    if(nearTarget || goingUpSlow){ this.explode(); this.alive=false; }
-    return this.alive;
-  }
-  explode(){
-    const type = pickShellType();
-    makeShell(type, this.x, this.y, this.hue);
-    // flaş parlaması
-    glowFlash(this.x,this.y,70);
-  }
-}
-
-// Kıvılcım/Parçacık (patlama ve roket kıvılcımı aynı sınıf)
-class Spark{
-  constructor(x,y,vx,vy,hue,life=80, small=false){
-    this.x=x; this.y=y; this.vx=vx; this.vy=vy; this.hue=hue; this.life=life;
-    this.age=0; this.small=small; this.trail=[]; this.glitter=Math.random()<0.25;
-  }
-  update(){
-    this.trail.unshift({x:this.x,y:this.y}); if(this.trail.length>10) this.trail.pop();
-
-    // fizik
-    this.vx*=airDrag; this.vy*=airDrag; this.vy+=gravity; this.vx+=wind*0.02;
-    this.x+=this.vx; this.y+=this.vy;
-    this.age++;
-
-    // çiz: önce iz çizgisi, sonra çekirdek; hafif parlama
-    ctx.save(); ctx.globalCompositeOperation='lighter';
-    for(let i=0;i<this.trail.length-1;i++){
-      const p=this.trail[i], n=this.trail[i+1];
-      const a = (1-i/10)*0.35;
-      ctx.strokeStyle = hsla(this.hue, 100, 60, a);
-      ctx.lineWidth = (this.small?1:1.6) - i*0.12;
-      ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(n.x,n.y); ctx.stroke();
-    }
-    const alpha = clamp(1 - this.age/this.life, 0, 1);
-    ctx.fillStyle = hsla(this.hue, 100, 65 + Math.sin(this.age*0.3)*8, alpha);
-    ctx.beginPath(); ctx.arc(this.x,this.y, this.small?1.1:1.8, 0, TAU); ctx.fill();
-
-    // sim (glitter)
-    if(this.glitter && Math.random()<0.3){
-      ctx.fillStyle = hsla(this.hue,100,85,alpha);
-      ctx.fillRect(this.x+rand(-1,1), this.y+rand(-1,1), 1, 1);
-    }
-    ctx.restore();
-
-    return this.age < this.life && this.y < innerHeight + 80;
-  }
-}
-
-// Parlama efekti (yakın çevreyi aydınlat)
-function glowFlash(x,y,r){
-  const g=ctx.createRadialGradient(x,y,0,x,y,r);
-  g.addColorStop(0,'rgba(255,255,255,0.35)');
-  g.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.fill();
-}
-
-// Kabuk türleri (daha gerçekçi desenler)
-function pickShellType(){
-  const types=['peony','chrys','willow','palm','ring'];
-  return types[Math.floor(Math.random()*types.length)];
-}
-
-function makeShell(type, x, y, baseHue){
-  const count = Math.round(rand(80,130));
-  const hueJitter = rand(-20,20);
-  const power = rand(4.2,6.2);
-
-  if(type==='ring'){
-    const ringCount = count;
-    const R = rand(60,90);
-    for(let i=0;i<ringCount;i++){
-      const a = i/ringCount*TAU; const vx=Math.cos(a)*power, vy=Math.sin(a)*power;
-      particles.push(new Spark(x+Math.cos(a)*R*0.05, y+Math.sin(a)*R*0.05, vx, vy, baseHue+hueJitter, rand(90,120)));
-    }
-    return;
-  }
-
-  for(let i=0;i<count;i++){
-    let a = (i/count)*TAU + rand(-0.02,0.02);
-    let speed = power * (1 + rand(-0.2,0.2));
-
-    if(type==='chrys'){ // chrysanthemum: daha sivri uçlar
-      speed *= 1.1; a += Math.sin(i)*0.002;
-    }
-    if(type==='willow'){ // ağır, uzun izli altın sönen dallar
-      speed *= 0.85;
-    }
-    if(type==='palm'){ // palmiye: birkaç güçlü yaprak
-      if(i%Math.floor(count/12)!==0) speed *= 0.45;
-    }
-    const vx = Math.cos(a)*speed;
-    const vy = Math.sin(a)*speed;
-    const hue = baseHue + hueJitter + rand(-6,6);
-    const life = type==='willow'? rand(120,160) : rand(80,120);
-    const s = new Spark(x,y,vx,vy,hue,life,false);
-    if(type==='willow') s.glitter=false; // daha düz altın çizgiler
-    particles.push(s);
-  }
-
-  // merkez parıltısı
-  for(let i=0;i<rand(12,20);i++) particles.push(new Spark(x,y,rand(-1,1),rand(-1,1), baseHue+rand(-5,5), 40, true));
-
-  // duman kümesi
-  for(let i=0;i<rand(10,16);i++) smokes.push(new Smoke(x+rand(-8,8), y+rand(-8,8)));
-}
-
-// Sıralı gösteri
-const message = document.getElementById('message');
-const replayBtn = document.getElementById('replay');
-const screenshotBtn = document.getElementById('screenshot');
-
-function launchBurst(cx=innerWidth/2){
-  const layers = Math.round(rand(2,4));
-  for(let L=0; L<layers; L++){
-    const targetY = rand(innerHeight*0.22, innerHeight*0.45);
-    const n = Math.round(rand(2,5));
-    for(let i=0;i<n;i++){
-      const tx = cx + (i-(n-1)/2) * rand(130,260);
-      const hue = rand(0,360);
-      rockets.push(new Rocket(rand(innerWidth*0.2, innerWidth*0.8), tx, targetY, hue));
-    }
-  }
-}
-
-function startShow(){
-  running=true; particles.length=0; rockets.length=0; smokes.length=0;
-  message.classList.remove('show');
-  let volley=0; const seq=setInterval(()=>{
-    if(!running){clearInterval(seq);return;}
-    launchBurst(rand(innerWidth*0.25, innerWidth*0.75));
-    volley++;
-    if(volley>5){ clearInterval(seq); setTimeout(()=>message.classList.add('show'), 1400); }
-  }, 1050);
-}
-
-replayBtn.addEventListener('click', startShow);
-
-screenshotBtn.addEventListener('click', ()=>{
-  const temp = document.createElement('canvas');
-  temp.width = innerWidth*DPR; temp.height = innerHeight*DPR; const t=temp.getContext('2d');
-  t.setTransform(DPR,0,0,DPR,0,0);
-  t.drawImage(canvas,0,0);
-  t.font='700 44px ui-sans-serif, system-ui'; t.fillStyle='#fff'; t.textAlign='center';
-  t.fillText('Doğum günün kutlu olsun Eslem! 🎂', innerWidth/2, innerHeight/2 - 12);
-  t.font='400 24px ui-sans-serif, system-ui'; t.fillStyle='rgba(255,255,255,.85)';
-  t.fillText('Nicee senelere, sağlıkla ve mutlulukla ✨', innerWidth/2, innerHeight/2 + 24);
-  const a=document.createElement('a'); a.download='eslem-dogumgunu.png'; a.href=temp.toDataURL('image/png'); a.click();
-});
-
-// Çizim döngüsü
-function loop(){
-  requestAnimationFrame(loop);
-
-  // arkaplanı hafifçe karart (iz bırakma etkisi)
-  ctx.fillStyle = `rgba(11,15,23,${backAlpha})`; ctx.fillRect(0,0,innerWidth,innerHeight);
-
-  // rüzgarı yumuşakça değiştir
-  if(windTimer--<=0){ windTarget = rand(-0.15,0.15); windTimer = Math.floor(rand(180,360)); }
-  wind = approach(wind, windTarget, 0.002);
-
-  // güncelle
-  for(let i=rockets.length-1;i>=0;i--) if(!rockets[i].update()) rockets.splice(i,1);
-  for(let i=particles.length-1;i>=0;i--) if(!particles[i].update()) particles.splice(i,1);
-  for(let i=smokes.length-1;i>=0;i--) if(!smokes[i].update()) smokes.splice(i,1);
-
-  // aksiyon düştüyse arada bir otomatik at
-  if(running && rockets.length===0 && particles.length<80 && Math.random()<0.02){
-    launchBurst(rand(innerWidth*0.2, innerWidth*0.8));
-  }
-}
-loop();
-
-// Başlat
-startShow();
-</script>
+    <script src="script.js"></script>
 </body>
+
 </html>
