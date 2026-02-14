@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bizim Hikayemiz</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibesi&family=Lato:wght@300;400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body class="timeline-body">
+
+    <div class="timeline-header">
+        <h1>Bizim Hikayemiz ❤️</h1>
+        <p>Kıymetlim</p>
+    </div>
+
+    <div class="timeline-container">
+
+        <!-- 1. Tanıştığımız Gün -->
+        <div class="timeline-item left">
+            <div class="timeline-content">
+                <div class="date">Başlangıç</div>
+                <h2>Tanıştığımız Gün</h2>
+                <p>Benim salak sacma yazdığım biseyden buraya kadar gelmesi</p>
+            </div>
+        </div>
+
+        <!-- 2. İlk Uzun Konuşma -->
+        <div class="timeline-item right">
+            <div class="timeline-content">
+                <div class="date">İlk Heyecan</div>
+                <h2>İlk Uzun Konuşma</h2>
+                <p>Sabahın 6sına kadar konuştuğumuz gün...</p>
+            </div>
+        </div>
+
+        <!-- 3. İlk Kavga -->
+        <div class="timeline-item left">
+            <div class="timeline-content">
+                <div class="date">Zorluklar</div>
+                <h2>Verilen Ara</h2>
+                <p>Bi süre uzak kaldık ama sonunda daha güçlü çıktık.</p>
+            </div>
+        </div>
+
+        <!-- 4. En Duygusal An (Fixed to Right for alternation) -->
+        <div class="timeline-item right">
+            <div class="timeline-content">
+                <div class="date">Gözyaşları</div>
+                <h2>En Duygusal An</h2>
+                <p>Sana titreyerek sarıldığım o gün...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="timeline-footer">
+        <h2>Devamı için birlikte yazmaya devam edeceğiz… ❤️</h2>
+        <button id="love-btn" class="back-btn">Seni Çok Seviyorum ❤️</button>
+    </div>
+
+    <script>
+        // Scroll Animation Script
+        const items = document.querySelectorAll('.timeline-item');
+
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        items.forEach(item => {
+            observer.observe(item);
+        });
+
+        // "I Love You" Button Logic
+        const loveBtn = document.getElementById('love-btn');
+        const messages = [
+            "Seni Çok Seviyorum ❤️",
+            "İyi ki Varsın 💖",
+            "Her Şeyimsin 🌹",
+            "Sonsuza Kadar... ♾️",
+            "Bitanem 🥰",
+            "Aşkım 💕"
+        ];
+
+        let lastSeenTimestamp = 0;
+
+        // Function to send love
+        loveBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            // Immediate feedback for the clicker
+            spawnHearts();
+
+            // Send to server
+            fetch('love.php?action=send')
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Love sent!", data);
+                })
+                .catch(err => console.error("Error sending love:", err));
+        });
+
+        // Function to check for love from others
+        setInterval(() => {
+            fetch('love.php?action=check')
+                .then(response => response.json())
+                .then(data => {
+                    const serverTimestamp = data.timestamp;
+
+                    // If this is the first check, just sync the time
+                    if (lastSeenTimestamp === 0) {
+                        lastSeenTimestamp = serverTimestamp;
+                        return;
+                    }
+
+                    // If server has a newer timestamp than what we last saw
+                    if (serverTimestamp > lastSeenTimestamp) {
+                        // Someone clicked the button!
+                        spawnHearts();
+                        lastSeenTimestamp = serverTimestamp;
+                    }
+                })
+                .catch(err => console.error("Error checking love:", err));
+        }, 1000); // Check every 1 second
+
+        function spawnHearts() {
+            // Create 5-10 floating texts
+            for (let i = 0; i < 5; i++) {
+                createFloatingText();
+            }
+        }
+
+        function createFloatingText() {
+            const text = document.createElement('div');
+            text.classList.add('floating-love-text');
+            text.innerText = messages[Math.floor(Math.random() * messages.length)];
+
+            // Random Position
+            const x = Math.random() * (window.innerWidth - 100);
+            const y = Math.random() * (window.innerHeight - 50);
+
+            text.style.left = `${x}px`;
+            text.style.top = `${y}px`;
+
+            // Random Color (from palette)
+            const colors = ['#e91e63', '#ffca28', '#ff4081', '#ffffff'];
+            text.style.color = colors[Math.floor(Math.random() * colors.length)];
+
+            // Random Font Size
+            const size = Math.random() * 20 + 20; // 20px - 40px
+            text.style.fontSize = `${size}px`;
+
+            document.body.appendChild(text);
+
+            // Remove after animation
+            setTimeout(() => {
+                text.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+
+</html>
